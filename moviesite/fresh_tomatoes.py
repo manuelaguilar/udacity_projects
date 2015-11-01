@@ -42,7 +42,28 @@ main_page_head = '''
         .movie-tile:hover {
             background-color: #EEE;
             cursor: pointer;
+	}
+        .movie-tile:hover .storyline {
+            background: #0066FF;
+            color: white;
+	    bottom:60px;
+	    display:inline;
+	    position:absolute;
         }
+        
+        .storyline {
+            display:none;
+            padding: 10px;
+        }
+      
+        .movie-tile:hover .storyline:before {
+	    display: block;
+            content: "";
+            position: absolute;
+            top: -5px;
+            width: 0;
+            height: 0;
+	}
         .scale-media {
             padding-bottom: 56.25%;
             position: relative;
@@ -124,7 +145,8 @@ main_page_content = '''
 movie_tile_content = '''
 <div class="col-md-6 col-lg-4 movie-tile text-center" data-trailer-youtube-id="{trailer_youtube_id}" data-toggle="modal" data-target="#trailer">
     <img src="{poster_image_url}" width="220" height="342">
-    <h2>{movie_title}</h2>
+    <h3>{movie_title} - {movie_year}</h3>
+    <span class="storyline">{movie_storyline}</span>
 </div>
 '''
 
@@ -143,9 +165,11 @@ def create_movie_tiles_content(movies):
 
         # Append the tile for the movie with its content filled in
         content += movie_tile_content.format(
-            movie_title=movie.title,
+            movie_title=movie.title.encode('utf8'),
             poster_image_url=movie.poster_image_url,
-            trailer_youtube_id=trailer_youtube_id
+            trailer_youtube_id=trailer_youtube_id,
+            movie_year = movie.release_date,
+            movie_storyline = movie.storyline
         )
     return content
 
