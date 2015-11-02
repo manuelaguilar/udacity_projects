@@ -25,14 +25,19 @@ YOUTUBE_API_VERSION = "v3"
 
 tmdb.API_KEY=api_keys.TMDB_API_KEY
 
+
 top20 = tmdb.Movies()
 response = top20.popular(page="1")
 
+def add_movie(title, year):
+  response["results"].append({"title":title,"release_date":year})
+
 movies = []
 
-response["results"].append({"title":"Star Wars: Episode VII - The Force Awakens","release_date":"2015-12-18"})
-response["results"].append({"title":"The Silence of the Lambs","release_date":"1991"})
-response["results"].append({"title":"Shaun the Sheep","release_date":"2015"})
+add_movie("Star Wars: Episode VII - The Force Awakens","2015-12-18")
+add_movie("The Silence of the Lambs","1991")
+add_movie("Shaun the Sheep", "2015")
+add_movie("The English Patient", "1996")
 
 for movie_item in response["results"]:
   #small fix for titles with non-familiar unicode characters
@@ -54,31 +59,8 @@ for movie_item in response["results"]:
   movie = media.Movie(movie_item["title"],imdb_movie_json["Year"],imdb_movie_json["Plot"],imdb_movie_json["Poster"],None)
   for search_result in search_response.get("items", []):
     movie.trailer_youtube_url = "https://www.youtube.com/watch?v=" + search_result["id"]["videoId"]
-  #print movie.title
-  #print movie.trailer_youtube_url
-  #print movie.poster_image_url
-  #print movie_item
   movies.append(movie)
 
-#movie = media.Movie("Toy Story",1993,"story_line here", "image_url_here","trailer_youtube_url_here")
-#test = urllib.urlopen("http://www.omdbapi.com/?i=tt0067277&r=json")
-#test = urllib.urlopen("http://www.omdbapi.com/?t=Batman v Superman: Dawn of Justice&r=json")
 
-#info = test.read()
-#info_formatted = json.loads(info)
-#test.close()
-
-#test2 = urllib.urlopen("http://api.traileraddict.com/?imdb=tt0067277")
-#API v2 deprecated , use v3
-#test2 = urllib.urlopen("http://gdata.youtube.com/feeds/api/videos/-/The-A-Team-trailer?max-results=1")
-#print test2.read()
-#test2.close()
-
-#print info_formatted['Title']
-#print info_formatted['Year']
-#print info_formatted['Plot']
-#print info_formatted['Poster']
-#print info_formatted
-#print movie.release_date
 
 fresh_tomatoes.open_movies_page(movies)

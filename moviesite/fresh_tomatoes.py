@@ -47,7 +47,7 @@ main_page_head = '''
         .movie-tile:hover .storyline {
             background: #0066FF;
             color: white;
-	    bottom:60px;
+	    bottom:70px;
 	    display:inline;
 	    position:absolute;
         }
