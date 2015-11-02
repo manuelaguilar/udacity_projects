@@ -1,0 +1,45 @@
+Movie Catalog Website v0.1
+Manuel Aguilar for udacity - Full stack web developer
+
+Description:
+This project builds a web page that contains popular and favorite movies with posters, story lines, and their respective Youtube trailers.
+Instead of typing out URLs and movie story lines, I used some available APIs to provide all the necessary information to the fresh_tomatoes module.
+
+Contents:
+
+moviewebsite/
+  fresh_tomatoes.py - Movie trailer website builder provided - modified to suit project requirements.
+  fresh_tomatoes.html - Output html file after executing movie catalog module.
+  media.py - Movie class definition.
+  moviecatalog.py - Main program to load movie list and invoke movie trailer website module.  
+  README - this file
+  api_keys.py - TMDB and Google API keys (not provided)
+
+Description:
+
+The module moviecatalog.py will retrieve the top 20 popular movies The Movie Databae API (TMDB) with the keys provided in api_keys.py.
+In addition, a few favorite movies are added to the list to meet requirements.
+Using movie title and date of movie release, more information is retrieved, this time, from the IMDB database using the Open Movie Database (OMDB).
+Using the movie title, the movie trailer is retrieved from Youtube using its API.
+The movie object is finally  built with title, release date, story line, poster URL, and youtube trailer URL. 
+The final list is passed to the fresh_tomatoes module to build the final html output to see.
+
+Execution:
+
+In order to execute the code locally, this module needs to be added:
+
+api_keys.py
+
+YOUTUBE_API_KEY = "{YOUR_YOUTUBE_API_KEY}" 
+TMDB_API_KEY="{YOUR_TMDB_API_KEY}"
+
+Also, these packages need to be installed:
+
+google-api-python-client
+tmdbsimple
+
+Afterwards, to build the website, execute moviecatalog.py.
+In case of issues running the program, please contact the developer or open the provided output html.
+
+
+
