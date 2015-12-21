@@ -34,7 +34,7 @@ def add_movie(title, year):
 
 movies = []
 
-add_movie("Star Wars: Episode VII - The Force Awakens","2015-12-18")
+add_movie("Star Wars The Force Awakens","2015")
 add_movie("The Silence of the Lambs","1991")
 add_movie("Shaun the Sheep", "2015")
 add_movie("The English Patient", "1996")
@@ -46,6 +46,7 @@ for movie_item in response["results"]:
   imdb_movie = imdb_request.read()
   imdb_movie_json = json.loads(imdb_movie)
   imdb_request.close()
+  print imdb_movie_json
   #get youtube trailer url
   h = httplib2.Http()
   h = httplib2.Http(ca_certs='/Library/Python/2.7/site-packages/httplib2-0.9.2-py2.7.egg/httplib2/cacerts.txt')
