@@ -17,13 +17,23 @@ class OthelloPlayer(ndb.Model):
     gameKeys = ndb.KeyProperty(repeated=True, kind='OthelloGame')
 
 
+class OthelloDatastoreLogic(ndb.Model):
+    board = ndb.JsonProperty()
+    player_turn = ndb.IntegerProperty()
+    check_move = ndb.JsonProperty()
+    array_move = ndb.JsonProperty()
+    array_x = ndb.JsonProperty()
+    array_y = ndb.JsonProperty()
+    array_n = ndb.JsonProperty()
+    game_mode = ndb.StringProperty()
+
 class OthelloGame(ndb.Model):
     """ OthelloGame object """
     status = ndb.StringProperty()
     starttime = ndb.DateProperty()
-    board = ndb.JsonProperty()
+    #board = ndb.JsonProperty()
     userKeys = ndb.KeyProperty(repeated=True, kind='OthelloPlayer')
-    gamelogic = ndb.BlobProperty()
+    gamelogic = ndb.StructuredProperty(OthelloDatastoreLogic)
 
 
 class OthelloGameHistory(ndb.Model):

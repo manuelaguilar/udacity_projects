@@ -6,7 +6,8 @@ from google.appengine.api import memcache
 #from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
 
-from utils import get_by_urlsafe
+from utils import get_by_urlsafe, load_game_logic,\
+        update_game_logic
 from othello_models import SimpleMessage
 from models import User
 from othello_models import OthelloGame, OthelloScoreBoard,\
@@ -15,12 +16,16 @@ from othello_models import NewGameForm
 
 import api_common
 import json
-import othello_logic
+from othello_logic import OthelloLogic
+from othello_models import OthelloDatastoreLogic
 
-
+DEFAULT_GAME_MODE="SINGLE_PLAYER"
 GET_USER_GAMES_REQUEST = endpoints.ResourceContainer(
         user_name=messages.StringField(1))
 MAX_TOP_SCORERS = 10
+GET_GAME_REQUEST = endpoints.ResourceContainer(
+        safe_url=messages.StringField(1),
+        game_id=messages.StringField(2),)
 GET_GAME_HISTORY_REQUEST = endpoints.ResourceContainer(
         game_id = messages.StringField(1))
 CANCEL_GAME_REQUEST = endpoints.ResourceContainer(
@@ -90,8 +95,8 @@ class OthelloApi(remote.Service):
 
     @endpoints.method(NewGameForm, SimpleMessage,
             path='newOthelloGame',
-            http_method='POST', name='newOthelloGame')
-    def newOthelloGame(self, request):
+            http_method='POST', name='new_game')
+    def new_othello_game(self, request):
         """ Create a new Othello game """ 
         # print input 
         players = []
@@ -104,7 +109,7 @@ class OthelloApi(remote.Service):
         
         self._newOthelloGame(request)
 
-        return SimpleMessage(message='Stub for NewGameForm')
+        return SimpleMessage(message='New game started,')
 
     def _newOthelloGame(self, request):
         """ Logic for creating a new Othello game. 
@@ -113,16 +118,10 @@ class OthelloApi(remote.Service):
         in list will be ancestor of OthelloGame. This can be
         improved by adding oauth. """
         
-        # set up 8x8 board
-        board = [ [0] * 8 ] * 8
-        # convert to json for datastore
-        json_board = json.dumps(board)
-        # statuses are "ACTIVE", "ENDED", CANCELLED games are removed
-        status = "ACTIVe"
 
         # set game mode
         if len(request.playerNames) == 1:
-            game_mode = "SINGLE_PLAYER"
+            game_mode = DEFAULT_GAME_MODE
         else:
             game_mode = "TWO_PLAYERS"
 
@@ -132,9 +131,28 @@ class OthelloApi(remote.Service):
                 get().key for uk \
                 in user_keys ]
 
-        #initialize game object
-        new_game = OthelloGame(status = status, starttime = datetime.today(), 
-                board = json_board, userKeys = othello_player_keys)
+        # initialize logic 
+        new_game_logic = OthelloLogic(game_mode=game_mode)
+        # initialize game object
+        # explicit array name containers, to avoid ambiguities if 
+        # using repated=True keyword
+        json_board = json.dumps(new_game_logic.B)
+        json_array_x = json.dumps(new_game_logic.X)
+        json_array_y = json.dumps(new_game_logic.Y)
+        json_array_n = json.dumps(new_game_logic.N)
+        json_array_move = json.dumps(new_game_logic.D)
+        json_check_move = json.dumps(new_game_logic.C)
+        game_logic = OthelloDatastoreLogic(board=json_board,
+                player_turn=new_game_logic.CP,
+                check_move=json_check_move,
+                array_move=json_array_move,
+                array_x=json_array_x,
+                array_y=json_array_y,
+                array_n=json_array_n,
+                game_mode=new_game_logic.game_mode)
+
+        new_game = OthelloGame(status = "ACTIVE", starttime = datetime.today(), 
+                gamelogic = game_logic, userKeys = othello_player_keys)
 
         #link new game to creator, in this case, first user in player list
         g_id = OthelloGame.allocate_ids(size=1, parent=othello_player_keys[0])[0]
@@ -154,6 +172,22 @@ class OthelloApi(remote.Service):
 
 
         print "Added game to player game keys"
+
+    @endpoints.method(GET_GAME_REQUEST, SimpleMessage,
+            path='getGame', name='get_game', http_method='GET')
+    def get_game(self, request):
+        """ Gets game status matching safeurl """
+        if not request.game_id:
+            game = get_by_urlsafe(request.safe_url, OthelloGame)
+        else:
+            g_key = ndb.Key(OthelloGame, int(request.game_id))
+            game = g_key.get()
+        if game:
+            board = json.loads(game.gamelogic.board)
+            return SimpleMessage(message="Here is the game board" + str(board))
+        else:
+            return SimpleMessage(message='No game found')
+
 
     @endpoints.method(GET_USER_GAMES_REQUEST, SimpleMessage,
             path='getUserGames',name='get_user_games',http_method='GET')
@@ -184,10 +218,13 @@ class OthelloApi(remote.Service):
             path='makeMove', name='make_move', http_method='POST')
     def make_move(self, request):
         """ Make a move for a game following the rules of Othello """
+
         #make transactional call to make move
-        if self._make_move(request):
+        isvalid, message = self._make_move(request)
+        if isvalid:
             return SimpleMessage(message="Move has been made, score is TBC.")
-        return SimpleMessage(message="The move was not allowed")
+        else:
+            return SimpleMessage(message="The move was not allowed")
 
 
     @ndb.transactional
@@ -197,15 +234,36 @@ class OthelloApi(remote.Service):
         player moves"""
         #game = ndb.Key(OthelloGame, long(request.game_id)).get()
         game = get_by_urlsafe(request.safe_url,OthelloGame)
-        print "Game:",game
-        board = json.loads(game.board)
-        if othello_logic._make_move(board, request.user_name, request.move):
+        if not game:
+            return SimpleMessage(messages="Game not found")
+        players = [ p.key.parent.get() for p  in game.userKeys ]
+        print "Players in this game", players
+        if request.name not in players:
+            return False, "Player {0} is not registered for this game".\
+                    format(request.user_name)
+        game_logic=load_game_logic(game.gamelogic)
+        player_number = request.user_name.index[request.user_name] + 1
+        isvalid, message = game_logic._make_move(1,request.move)
+        print "Whose turn is it?", game_logic.CP
+        print message
+        print "game mode:", game_logic.game_mode
+        if isvalid and game_logic.game_mode == DEFAULT_GAME_MODE:
+            print "Calling CPU for move..."
+            isvalid, message =  game_logic._cpu_move()
+            print message
+        update_game_logic(game_logic, game.gamelogic)
+        game_logic._getScore()
+        game.put()
+        #update datastore with game snapshot
+
+        return isvalid, message
+        #if othello_logic._make_move(board, request.user_name, request.move):
             #update game board
-            score = othello_logic._getScore(board)
-            game.board = json.dumps(board)
-            game.put()
-            return True
-        return False
+        #    score = othello_logic._getScore(board)
+        #    game.board = json.dumps(board)
+        #    game.put()
+        #    return True
+        #return False
 
 
     @endpoints.method(CANCEL_GAME_REQUEST, SimpleMessage,
