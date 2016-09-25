@@ -1,0 +1,28 @@
+Reflections on the design of Othello C64 for Google App Engine.
+
+This is a project I wanted to revisit for a very long time. I'm grateful to 
+some people in Spain that still had the original version for me to see and 
+port the game to Python following the same ancient logic.
+
+With regards to design, it was difficult to transit from RDBMS to NDB, particularly
+with the ancestry relationship.
+
+I decided to extend the demo User entity as a way to integrate with a container of 
+games that use the same user datastore, thus, I created the OthelloPlayer kind.
+
+I isolated the game logic, which can run on its own, but all data had to be mapped to
+json in order to store it. Also memcache was not an option since the whole game 
+state would have been lost on eviction from the cache.
+
+I tried to give ancestry consistency across different kinds. For instance,
+the entities that have the game logic have to be unique to their respective games.
+A scoreboard entry should not exist if there is no player related to it.
+
+I believe the same effort to apply ancestry could be time consuming if we start 
+adding delete operations, which had to be tracked properly to keep the data 
+model consistent. For this, I also decided not to delete cancelled games.
+
+Something interesting was the option to use a ComputedProperty to keep track of
+the performance index of each player.
+
+

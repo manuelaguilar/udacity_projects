@@ -4,13 +4,11 @@ This can also contain game logic. For more complex games it would be wise to
 move game logic to another file. Ideally the API will be simple, concerned
 primarily with communication to/from the API's users."""
 
-
-import logging
 import endpoints
 from protorpc import remote, messages
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
-
+from google.appengine.ext import ndb
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
     ScoreForms
@@ -21,15 +19,12 @@ from othello import OthelloApi
 import api_common
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
-#GET_GAME_REQUEST = endpoints.ResourceContainer(
-#        urlsafe_game_key=messages.StringField(1),)
 MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
     MakeMoveForm,
     urlsafe_game_key=messages.StringField(1),)
-#USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
-#                                           email=messages.StringField(2))
 
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
+
 
 @endpoints.api(name='guess_a_number', version='v1')
 class GuessANumberApi(remote.Service):
@@ -44,7 +39,8 @@ class GuessANumberApi(remote.Service):
         if User.query(User.name == request.user_name).get():
             raise endpoints.ConflictException(
                     'A User with that name already exists!')
-        user = User(name=request.user_name, email=request.email)
+        user_key = ndb.Key(User, request.user_name)
+        user = User(key=user_key, name=request.user_name, email=request.email)
         user.put()
         return StringMessage(message='User {} created!'.format(
                 request.user_name))
@@ -142,7 +138,8 @@ class GuessANumberApi(remote.Service):
                       http_method='GET')
     def get_average_attempts(self, request):
         """Get the cached average moves remaining"""
-        return StringMessage(message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
+        return StringMessage(
+                message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
 
     @staticmethod
     def _cache_average_attempts():
@@ -151,10 +148,11 @@ class GuessANumberApi(remote.Service):
         if games:
             count = len(games)
             total_attempts_remaining = sum([game.attempts_remaining
-                                        for game in games])
+                                           for game in games])
             average = float(total_attempts_remaining)/count
-            memcache.set(MEMCACHE_MOVES_REMAINING,
-                         'The average moves remaining is {:.2f}'.format(average))
+            memcache.set(
+                MEMCACHE_MOVES_REMAINING,
+                'The average moves remaining is {:.2f}'.format(average))
 
 
 api = endpoints.api_server([GuessANumberApi, OthelloApi])
