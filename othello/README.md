@@ -11,12 +11,12 @@ User kind, suggesting that other games can be hooked to the api server in the sa
 project id.
 
 1. The setup sequence is:
-- Start application
-- Add some users via the Othello API. This will add them to the User kind of they are
+  - Start application
+  - Add some users via the Othello API. This will add them to the User kind of they are
 not already there.
-- Start a game, either single or multiplayer. For ease of use, I added a game id property.
+  - Start a game, either single or multiplayer. For ease of use, I added a game id property.
 You can retrieve game ids by using the get_user_games endpoint.
-- To make a move, enter game id, user id, and movement coordinates in format row,col. The application
+  - To make a move, enter game id, user id, and movement coordinates in format row,col. The application
 will detect if the user is in the game and if it's his or her turn. There is no check on
 the move input, so make sure it's row,col. There are two additional moves. Move 0 will
 make the current player abdicate from the game and give the opponent a win. 
@@ -25,8 +25,8 @@ possible that too many yields will remove all opponents pieces, for which the ga
 have to be abandoned or cancelled. The algorithm doesn't detect for no more user moves
 possible, so a user will have to decide when to yield or when to end the game, provided
 the board is not completely filled in yet (game over!).
-- Moves will return a message and the CPU will make an immediate move if in SINGLE PLAYER MODE.
-- To view the status of the game board, you have to use either get_game or get_user_games.
+  - Moves will return a message and the CPU will make an immediate move if in SINGLE PLAYER MODE.
+  - To view the status of the game board, you have to use either get_game or get_user_games.
 Another way to see the plays is by looking at the application standard output. I added a 
 pretty print for the 8x8 matrix so it's easier to play using the App Engine API web client,
 and the GoogleAppEngineLauncher log screen.
@@ -52,7 +52,7 @@ feature that just freezes the game with no player stats computed.
  - othello.py: Contains endpoints for the Othello game.
  - othello_gamelogic.py: Contains the whole logic of the game following its original
 implementation as a tribute to the old Commodore 64.
- - othello_logic_testdriver: a script to test the game logic with a complete game.
+ - othello_logic_testdriver.py: a script to test the game logic with a complete game.
  - othello_models.py: Entity and message definitions for the Othello game app.
  - api.py: Endpoints and logic of guess a number demo app.
  - app.yaml: App configuration, including task and cron job in project scope.
@@ -73,7 +73,7 @@ logic json objects into arrays and some arithmetic to obtain game difference poi
     player is added to the scoreboard. It will raise a ConflictException if a User 
     with that user name already exists.
     
- - **new_othello_game**
+ - **new_game**
     - Path: 'newOthelloGame'
     - Method: POST
     - Parameters: user_name (1 or 2)
