@@ -54,7 +54,8 @@ feature that just freezes the game with no player stats computed.
 implementation as a tribute to the old Commodore 64.
  - othello_logic_testdriver.py: a script to test the game logic with a complete game.
  - othello_models.py: Entity and message definitions for the Othello game app.
- - api.py: Endpoints and logic of guess a number demo app.
+ - api.py: Endpoints and logic of guess a number demo app. It includes the OthelloApi
+ added to the api server constructor at the end of the file.
  - app.yaml: App configuration, including task and cron job in project scope.
  - cron.yaml: Cronjob configuration, including schedule for job in project scope.
  - main.py: Handlers for tasks and cron jobs, including cronjob and task in project scope.
