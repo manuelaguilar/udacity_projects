@@ -141,7 +141,7 @@ logic json objects into arrays and some arithmetic to obtain game difference poi
     - Description: Returns top 10 ranked users based on a specific criteria: 
     wins + winning streak + (average winning game score differential / 10)
 
-  - **get_game_history**
+ - **get_game_history**
     - Path: 'getGameHistory'
     - Method: GET
     - Parameters: game_id
