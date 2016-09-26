@@ -1,4 +1,5 @@
 from pprint import pprint
+import re
 DEFAULT_GAME_MODE = "SINGLE_PLAYER"
 
 # OTHELLO C64 - OTELO PARA COMMODORE 64 BASIC
@@ -51,6 +52,21 @@ class OthelloLogic:
         # '0' is another way for a user input to cancel the game
         # for now I will just ignore it because I'd have to
         # rewrite the cancel_game endpoint
+
+        # PARSE AND CHECK request.move
+        # valid input:
+        # 0 : abandon game
+        # 9 : yield turn
+        # 1-8,1-8 : move to row, col
+
+        move = move.strip()
+        if (move == '0' or move =='9') or re.match('[1-8],[1-8]',move):
+            pass
+        else:
+            return (False, "Invalid input. Possible inputs are "
+                " 0 : end game, 9 : yield turn "
+                " 1-8,1-8 : move to row, column")
+
         if move == "0":
             return (False, "Not implemented")
         opponent = 1 if self.CP == 2 else 2

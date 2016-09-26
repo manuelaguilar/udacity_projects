@@ -8,7 +8,17 @@ class SimpleMessage(messages.Message):
 
 
 class NewGameForm(messages.Message):
-    playerNames = messages.StringField(1, repeated=True)
+#    playerNames = messages.StringField(1,
+#            repeated=True)
+    player_one = messages.StringField(1,
+            required=True)
+    player_two = messages.StringField(2)
+     
+
+class User(ndb.Model):
+    """User profile"""
+    name = ndb.StringProperty(required=True)
+    email =ndb.StringProperty()
 
 
 class OthelloPlayer(ndb.Model):
@@ -76,7 +86,7 @@ class OthelloGameHistoryForm(messages.Message):
     """ Othello game history """
     game_id = messages.IntegerField(1)
     moves = messages.StringField(2)
-    message = messages.StringField(3)
+    game_status = messages.StringField(3)
 
 
 class OthelloHighScoreEntryForm(messages.Message):

@@ -47,6 +47,13 @@ Once the board is filled with player's pieces, the game ends and the total are c
 The player with the most pieces wins. There is also the possibility of a tie.
 Any of the players can abandon the game at any time, which is different to the 'cancel' game
 feature that just freezes the game with no player stats computed.
+ - Scoring: each player gets a point per piece in the board. Game stats are taken into account
+for completed or ended games, for the winning player only. The performance index is measured by
+wins + winning streak + (average winning game score differential / 10. The average winning 
+game score differential is average of the difference in points between the winning and losing player
+(draws do not account for points). For instance, if a player has 5 wins, a winning streak of
+3 games, and his last score diffential was 10 points, the latter will be averaged  with the 
+current score differential ( current average + new differential / 2 ).
 
 ##Files Included:
  - othello.py: Contains endpoints for the Othello game.

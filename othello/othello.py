@@ -8,10 +8,9 @@ from utils import load_game_logic,\
         update_game_logic, get_by_game_id,\
         update_score_difference_ave
 from othello_models import SimpleMessage
-from models import User
 from othello_models import OthelloGame,\
         OthelloScoreBoardEntry, OthelloGameHistory,\
-        OthelloPlayer
+        OthelloPlayer, User
 from othello_models import NewGameForm, OthelloGameForm,\
     OthelloGameForms, OthelloGameHistoryForm, OthelloHighScoreForm,\
     OthelloHighScoreEntryForm, OthelloPlayerRankingForm,\
@@ -31,22 +30,23 @@ MAX_TOP_SCORERS = 10
 
 # RESOURCE CONTAINERS
 GET_USER_GAMES_REQUEST = endpoints.ResourceContainer(
-        user_name=messages.StringField(1))
+        user_name=messages.StringField(1,required=True),
+        )
 GET_GAME_REQUEST = endpoints.ResourceContainer(
-        safe_url=messages.StringField(1),
-        game_creator=messages.StringField(2),
-        game_id=messages.IntegerField(3),)
+        game_id=messages.IntegerField(1,required=True),
+        )
 GET_GAME_HISTORY_REQUEST = endpoints.ResourceContainer(
-        game_id=messages.StringField(1))
+        game_id=messages.IntegerField(1,required=True),
+        )
 CANCEL_GAME_REQUEST = endpoints.ResourceContainer(
-        user_name=messages.StringField(1),
-        game_id=messages.StringField(2),
-        safe_url=messages.StringField(3),)
+        user_name=messages.StringField(1, required=True),
+        game_id=messages.IntegerField(2, required=True),
+        )
 MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
-        game_id=messages.StringField(1),
-        user_name=messages.StringField(2),
-        move=messages.StringField(3),
-        safe_url=messages.StringField(4))
+        game_id=messages.IntegerField(1,required=True),
+        user_name=messages.StringField(2,required=True),
+        move=messages.StringField(3,required=True),
+        )
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -119,7 +119,13 @@ class OthelloApi(remote.Service):
     def new_othello_game(self, request):
         """ Create a new Othello game """
         # check players exist
-        for player_name in request.playerNames:
+        if request.player_two:
+            playerNames = [ request.player_one, request.player_two ]
+        else:
+            playerNames = [ request.player_one ]
+        print playerNames
+
+        for player_name in playerNames:
             user_key = ndb.Key(User, player_name)
             user = user_key.get()
             if not user:
@@ -147,7 +153,12 @@ class OthelloApi(remote.Service):
         implementation """
 
         # set game mode
-        if len(request.playerNames) == 1:
+        if request.player_two:
+            playerNames = [ request.player_one, request.player_two ]
+        else:
+            playerNames = [ request.player_one ]
+
+        if len(playerNames) == 1:
             game_mode = SINGLE_PLAYER_MODE
         else:
             game_mode = TWO_PLAYER_MODE
@@ -156,7 +167,7 @@ class OthelloApi(remote.Service):
         # assert : all keys have been verified to exist
         othello_players_keys = [ndb.Key(
             OthelloPlayer, name, parent=ndb.Key(
-                User, name)) for name in request.playerNames]
+                User, name)) for name in playerNames]
 
         # initialize logic
         new_game_logic = OthelloLogic(game_mode=game_mode)
@@ -216,17 +227,8 @@ class OthelloApi(remote.Service):
     @endpoints.method(GET_GAME_REQUEST, OthelloGameForm,
                       path='getGame', name='get_game', http_method='GET')
     def get_game(self, request):
-        """ Gets game status matching safeurl
-         or by providing game creator user name and game id"""
-        game = get_by_game_id(request.safe_url, request.game_id)
-        if not game:
-            # search by creator and id
-            games = OthelloGame.query()
-            for g in games:
-            g_key = ndb.Key(User, request.game_creator,
-                            OthelloPlayer, request.game_creator,
-                            OthelloGame, long(request.game_id))
-            game = g_key.get()
+        """ Gets game status by game id"""
+        game = get_by_game_id(request.game_id)
         if game:
             return self._copyOthelloGameToForm(game)
         else:
@@ -286,7 +288,7 @@ class OthelloApi(remote.Service):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     @endpoints.method(MAKE_MOVE_REQUEST, SimpleMessage,
-                      path='makeMove', name='make_move', http_method='POST')
+                      path='makeMove', name='make_move', http_method='PUT')
     def make_move(self, request):
         """ Make a move for a game following the rules of Othello """
 
@@ -298,7 +300,7 @@ class OthelloApi(remote.Service):
         """ Controller for movements. If game is SINGLE_PLAYER,
         CPU will take turn after player submits valid move.
         Otherwise, CPU waits for valid move or yield from player"""
-        game = get_by_game_id(request.safe_url, request.game_id)
+        game = get_by_game_id(request.game_id)
         if not game:
             return False, "Game not found"
         print "Game status", game.status, type(game.status)
@@ -359,6 +361,9 @@ class OthelloApi(remote.Service):
             message = "Game has ended. The board is full!"
         if request.move == '0':
             game.status = "ENDED_INCOMPLETE"
+            # record last move 
+            moves.append([players[0].name if player_turn == 1 else 
+                players[1].name, request.move])
             message = "The user abandoned the game. "
             "Score will be accounted for"
 
@@ -432,21 +437,13 @@ class OthelloApi(remote.Service):
 
     @endpoints.method(CANCEL_GAME_REQUEST, SimpleMessage,
                       path='cancelGame', name='cancel_game',
-                      http_method='POST')
+                      http_method='PUT')
     def cancel_game(self, request):
         """ Cancel game. Game state and history is preserved in datastore.
         Only requestor of game (parent) can cancel it"""
 
         # try to get game by safe_url or by game_id
-        game = get_by_game_id(request.safe_url, request.game_id)
-
-        if not game:
-            # try to find game with parent key and entity id
-            op = OthelloPlayer.query(
-                    ancestor=ndb.Key(User, request.user_name)).get()
-            k = ndb.Key(OthelloGame, long(request.game_id),
-                        parent=op.key)
-            game = k.get()
+        game = get_by_game_id(request.game_id)
 
         if not game:
             # game cannot be found
@@ -455,9 +452,17 @@ class OthelloApi(remote.Service):
         if game.status == "CANCELLED":
             raise endpoints.BadRequestException('Game has already been'
                                                 ' cancelled.')
-        if game and (game.key.parent() != OthelloPlayer.query(
-                    ancestor=ndb.Key(User, request.user_name)).get().key):
-            raise endpoints.BadRequestException('User is not game'
+        if not game.status == "ACTIVE":
+            raise endpoints.BadRequestException('And ended game cannot'
+                                                ' be cancelled.')
+        if game:
+            creator = OthelloPlayer.query(
+                    ancestor=ndb.Key(User, request.user_name)).get()
+            if not creator:
+                raise endpoints.BadRequestException('User does not exist.')
+            else:
+                if game.key.parent() != creator.key:
+                    raise endpoints.BadRequestException('User is not game'
                                                 ' creator')
 
         # cancel game
@@ -536,7 +541,7 @@ class OthelloApi(remote.Service):
                       http_method='GET')
     def get_game_history(self, request):
         """ Query game history kind for games matching id """
-        game = get_by_game_id(safe_url=None, game_id=request.game_id)
+        game = get_by_game_id(game_id=request.game_id)
         if not game:
             return OthelloGameHistoryForm(
                     message='No history found for game ' + request.game_id)
@@ -547,6 +552,8 @@ class OthelloApi(remote.Service):
                     'Could not find history linked to this game')
 
         return OthelloGameHistoryForm(
-                message="Found game history",
+                game_status=game_history.key.parent().get().status,
                 game_id=int(request.game_id),
                 moves=game_history.moves)
+
+api = endpoints.api_server([OthelloApi])

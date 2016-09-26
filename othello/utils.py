@@ -37,13 +37,11 @@ def get_by_urlsafe(urlsafe, model):
     return entity
 
 
-def get_by_game_id(safe_url, game_id):
+def get_by_game_id(game_id):
     """ This is to find a game entity by an assigned game_id """
     """ if no game is found None is returned """
-    if safe_url:
-        game = get_by_urlsafe(safe_url, OthelloGame)
-    elif game_id:
-        games = OthelloGame.query().fetch()
+    if game_id:
+        games = OthelloGame.query(OthelloGame.game_id == game_id)
         if games:
             game = [g for g in games if g.game_id == int(game_id)]
             print "GAME:", game
